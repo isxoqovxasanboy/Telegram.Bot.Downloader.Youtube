@@ -25,7 +25,6 @@ public partial class UpdateHandlerService
                 //authorization:find admin status
                 if (state == Status.Contact)
                 {
-
                 }
                 else
                 {
@@ -79,6 +78,9 @@ public partial class UpdateHandlerService
                     case Status.Music:
                         return;
                     case Status.Youtube:
+                        await CommandDownloadResaltAsync(botClient, update, cancellationToken, Status.Youtube,
+                            textMessage!);
+
                         return;
                     case Status.Instagram:
                         return;
@@ -87,10 +89,10 @@ public partial class UpdateHandlerService
 
                 var textHandler = textMessage switch
                 {
-                    "/start" => CommandForPhoneNumberRequest(botClient, update, cancellationToken),
-                    "🎧 Download music" => throw new ArgumentException(),
-                    "📺 Download Youtube movie or video" => throw new ArgumentException(),
-                    "📸 Download Instagram video or store" => throw new ArgumentException(),
+                    "/start" => await CommandForPhoneNumberRequest(botClient, update, cancellationToken),
+                    "📺 Download Youtube movie or video" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Youtube),
+                    "🎧 Download music" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Music),
+                    "📸 Download Instagram video or store" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Instagram),
                     _ => throw new ArgumentException()
                 };
 
