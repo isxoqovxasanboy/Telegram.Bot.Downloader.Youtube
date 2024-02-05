@@ -2,10 +2,8 @@
 using Newtonsoft.Json;
 using Telegram.Bot.Downloader.Youtube.Clients;
 using Telegram.Bot.Downloader.Youtube.Entities.Models;
-using Telegram.Bot.Downloader.Youtube.Enums;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
 using YoutubeExplode;
 using File = System.IO.File;
 
@@ -13,7 +11,7 @@ namespace Telegram.Bot.Downloader.Youtube.BotService.MessageSender;
 
 public static class SendMessage
 {
-    //Telefon number so'rash uchun
+    //Ask phone number
     public static async ValueTask<Message> ForPhoneNumberRequest(
         ITelegramBotClient botClient,
         Update update,
@@ -199,7 +197,7 @@ public static class SendMessage
             }
 
             Message message;
-            if (result.type.StartsWith("video",StringComparison.CurrentCultureIgnoreCase))
+            if (result.type.StartsWith("video", StringComparison.CurrentCultureIgnoreCase))
             {
                 message = await botClient.SendVideoAsync
                 (
@@ -210,7 +208,7 @@ public static class SendMessage
                     cancellationToken: cancellationToken
                 );
             }
-            else if (result.type.StartsWith("Photo",StringComparison.CurrentCultureIgnoreCase))
+            else if (result.type.StartsWith("Photo", StringComparison.CurrentCultureIgnoreCase))
             {
                 message = await botClient.SendPhotoAsync
                 (
@@ -235,13 +233,13 @@ public static class SendMessage
         }
         catch (Exception e)
         {
-           return await botClient.SendAnimationAsync
-           (
-               chatId: update.Message!.Chat.Id,
-               animation: InputFile.FromUri("https://ask.libreoffice.org/uploads/asklibo/original/3X/3/5/35664d063435f940bda4cb3bb31ea0a6c5fed2f4.gif"),
-               caption: "Not found",
-               cancellationToken: cancellationToken
-           );
+            return await botClient.SendAnimationAsync
+            (
+                chatId: update.Message!.Chat.Id,
+                animation: InputFile.FromUri("https://ask.libreoffice.org/uploads/asklibo/original/3X/3/5/35664d063435f940bda4cb3bb31ea0a6c5fed2f4.gif"),
+                caption: "Not found",
+                cancellationToken: cancellationToken
+            );
         }
     }
 
