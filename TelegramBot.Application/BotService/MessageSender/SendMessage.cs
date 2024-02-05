@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Net;
+using Newtonsoft.Json;
 using Telegram.Bot.Downloader.Youtube.Clients;
 using Telegram.Bot.Downloader.Youtube.Entities.Models;
 using Telegram.Bot.Downloader.Youtube.Enums;
@@ -33,7 +34,7 @@ public static class SendMessage
     public static async ValueTask<Message> ForMainState(
         ITelegramBotClient botClient,
         Update update,
-        CancellationToken cancellationToken, bool adminPermission = true)
+        CancellationToken cancellationToken, bool adminPermission = false)
     {
         Message message;
         if (adminPermission)
@@ -48,8 +49,9 @@ public static class SendMessage
         else
         {
             message = await botClient.SendTextMessageAsync(
-                chatId: update.CallbackQuery!.Message!.Chat.Id,
-                text: "Okay send link.",
+                chatId: update.Message!.Chat.Id,
+                text: "Okay. Select one page",
+                replyMarkup: await ReplyKeyboardMarkups.ForMainState(adminPermission),
                 cancellationToken: cancellationToken
             );
         }
@@ -58,21 +60,37 @@ public static class SendMessage
     }
 
 
-    public static async ValueTask<Message> ForMainState(
-        ITelegramBotClient botClient,
-        Update update,
-        CancellationToken cancellationToken,Client storegUser)
-    {
-        
-        var message = await botClient.SendTextMessageAsync(
-            chatId: update.Message is null ?  storegUser.TelegramId : update.Message!.Chat.Id,
-            text: "Okay. Select one page",
-            replyMarkup: await ReplyKeyboardMarkups.ForMainState(),
-            cancellationToken: cancellationToken
-        );
+    // public static async ValueTask<Message> ForMainState(
+    //     ITelegramBotClient botClient,
+    //     Update update,
+    //     CancellationToken cancellationToken,Client storegUser)
+    // {
+    //     
+    //     var message = await botClient.SendTextMessageAsync(
+    //         chatId: update.Message is null ?  storegUser.TelegramId : update.Message!.Chat.Id,
+    //         text: "Okay. Select one page",
+    //         replyMarkup: await ReplyKeyboardMarkups.ForMainState(),
+    //         cancellationToken: cancellationToken
+    //     );
+    //
+    //     return message;
+    // }
 
-        return message;
-    }
+    // public static async ValueTask<Message> ForMainState(
+    //     ITelegramBotClient botClient,
+    //     Update update,
+    //     CancellationToken cancellationToken)
+    // {
+    //     
+    //     var message = await botClient.SendTextMessageAsync(
+    //         chatId: update.Message!.Chat.Id,
+    //         text: "Okay. Select one page",
+    //         replyMarkup: await ReplyKeyboardMarkups.ForMainState(),
+    //         cancellationToken: cancellationToken
+    //     );
+    //
+    //     return message;
+    // }
 
 
     public static async ValueTask<Message> SendReadyRequest(ITelegramBotClient botClient, Update update,
@@ -140,56 +158,93 @@ public static class SendMessage
     }
 
 
-
-
     public static async ValueTask<Message> SendResultVideoByInstagram(ITelegramBotClient botClient, Update update,
                                                                       CancellationToken cancellationToken, string url)
     {
-        var client = new HttpClient();
-        var request = new HttpRequestMessage
+        try
         {
-            Method = HttpMethod.Get,
-            RequestUri =
-                new Uri(url),
-            Headers =
+            var encodedUrl = WebUtility.UrlEncode(url);
+            Console.WriteLine(encodedUrl);
+
+            var client = new HttpClient();
+            var request = new HttpRequestMessage
             {
-                { "X-RapidAPI-Key", "55986fec27msh0d7c21c836d8933p1c7cd8jsn4d78c0f6a5b0" },
-                { "X-RapidAPI-Host", "instagram-downloader-download-instagram-videos-stories.p.rapidapi.com" },
-            },
-        };
+                Method = HttpMethod.Get,
+                RequestUri =
+                    new Uri(
+                        $"https://instagram-downloader-download-instagram-videos-stories1.p.rapidapi.com/?url={encodedUrl}"),
+                Headers =
+                {
+                    { "X-RapidAPI-Key", "55986fec27msh0d7c21c836d8933p1c7cd8jsn4d78c0f6a5b0" },
+                    { "X-RapidAPI-Host", "instagram-downloader-download-instagram-videos-stories1.p.rapidapi.com" },
+                },
+            };
+
+            var body = "";
+            using (var response = await client.SendAsync(request))
+            {
+                response.EnsureSuccessStatusCode();
+                body = await response.Content.ReadAsStringAsync();
+            }
 
 
-        using var response = await client.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadAsStringAsync();
-        var se = JsonConvert.DeserializeObject<Root>(body);
+            List<RootInstagram>? instagramVideosAndPhotos =
+                JsonConvert.DeserializeObject<List<RootInstagram>>(body);
 
-        var d = new HttpClient();
-        var responses = d.GetAsync(se.media).Result;
-        var b = responses.Content.ReadAsStream(cancellationToken);
+            RootInstagram result = new RootInstagram();
 
-        var message = await botClient.SendVideoAsync
-        (
-            chatId: update.Message!.Chat.Id,
-            video: InputFile.FromStream(b),
-            caption: "Done",
-            cancellationToken: cancellationToken
-        );
+            if (instagramVideosAndPhotos != null)
+            {
+                result = instagramVideosAndPhotos.First();
+            }
 
-        return message;
+            Message message;
+            if (result.type.StartsWith("video",StringComparison.CurrentCultureIgnoreCase))
+            {
+                message = await botClient.SendVideoAsync
+                (
+                    chatId: update.Message!.Chat.Id,
+                    video: InputFile.FromUri(result.url),
+                    supportsStreaming: true,
+                    caption: "Done",
+                    cancellationToken: cancellationToken
+                );
+            }
+            else if (result.type.StartsWith("Photo",StringComparison.CurrentCultureIgnoreCase))
+            {
+                message = await botClient.SendPhotoAsync
+                (
+                    chatId: update.Message!.Chat.Id,
+                    photo: InputFile.FromUri(result.url),
+                    caption: "Done",
+                    cancellationToken: cancellationToken
+                );
+            }
+            else
+            {
+                message = await botClient.SendAnimationAsync
+                (
+                    chatId: update.Message!.Chat.Id,
+                    animation: InputFile.FromUri("https://ask.libreoffice.org/uploads/asklibo/original/3X/3/5/35664d063435f940bda4cb3bb31ea0a6c5fed2f4.gif"),
+                    caption: "Not found",
+                    cancellationToken: cancellationToken
+                );
+            }
+
+            return message;
+        }
+        catch (Exception e)
+        {
+           return await botClient.SendAnimationAsync
+           (
+               chatId: update.Message!.Chat.Id,
+               animation: InputFile.FromUri("https://ask.libreoffice.org/uploads/asklibo/original/3X/3/5/35664d063435f940bda4cb3bb31ea0a6c5fed2f4.gif"),
+               caption: "Not found",
+               cancellationToken: cancellationToken
+           );
+        }
     }
 
-
-
-    public class Root
-    {
-        public string media { get;}
-        public string thumbnail { get; set; }
-        public string Type { get; set; }
-        public string API { get; set; }
-        public string title { get; set; }
-    }
-    
     #region Admin Commands
 
     //Userlani ma'lumotlarini qaytaradi

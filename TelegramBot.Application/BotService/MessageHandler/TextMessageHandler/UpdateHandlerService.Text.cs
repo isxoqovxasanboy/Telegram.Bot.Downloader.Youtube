@@ -76,6 +76,8 @@ public partial class UpdateHandlerService
                         await SendMessage.ForPhoneNumberRequest(botClient, update, cancellationToken);
                         return;
                     case Status.Music:
+                        await CommandDownloadResaltAsync(botClient, update, cancellationToken, Status.Music,
+                            textMessage!);
                         return;
                     case Status.Youtube:
                         await CommandDownloadResaltAsync(botClient, update, cancellationToken, Status.Youtube,
@@ -95,7 +97,7 @@ public partial class UpdateHandlerService
                     "📺 Download Youtube movie or video" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Youtube),
                     "🎧 Download music" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Music),
                     "📸 Download Instagram video or store" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Instagram),
-                    _ => await CommandForPhoneNumberRequest(botClient, update, cancellationToken)
+                    _ => await CommandForPhoneNumberRequest(botClient, update, cancellationToken),
                 };
 
 
