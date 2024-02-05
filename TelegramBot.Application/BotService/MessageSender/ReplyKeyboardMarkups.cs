@@ -1,4 +1,5 @@
-﻿using Telegram.Bot.Types.ReplyMarkups;
+﻿using Telegram.Bot.Downloader.Youtube.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Downloader.Youtube.BotService.MessageSender;
 
@@ -33,10 +34,32 @@ public class ReplyKeyboardMarkups
                 ],
             ];
         }
+        
         var replyKeyboardMarkup = new ReplyKeyboardMarkup(keyboardButtons) { ResizeKeyboard = true };
 
         return ValueTask.FromResult(replyKeyboardMarkup);
     }
+    
+    public static ValueTask<InlineKeyboardMarkup> ForMainState()
+    {
+        InlineKeyboardMarkup inlineKeyboard = new(new[]
+        {
+            // first row
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "🎧 Download music", callbackData: Status.Music.ToString()),
+            },
+            // second row
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "📺 Download Youtube movie or video", callbackData: Status.Youtube.ToString()),
+                InlineKeyboardButton.WithCallbackData(text: "📸 Download Instagram video or store", callbackData: Status.Instagram.ToString()),
+            },
+        });
+        
+        return ValueTask.FromResult(inlineKeyboard);
+    }
+    
 
     public static ValueTask<ReplyKeyboardMarkup> ForPhoneNumberRequest()
     {
@@ -45,4 +68,8 @@ public class ReplyKeyboardMarkups
 
         return ValueTask.FromResult(replyKeyboardMarkup);
     }
+
+    
+    
+    
 }

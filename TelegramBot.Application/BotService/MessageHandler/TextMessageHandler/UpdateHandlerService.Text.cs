@@ -83,6 +83,8 @@ public partial class UpdateHandlerService
 
                         return;
                     case Status.Instagram:
+                        await CommandDownloadResaltAsync(botClient, update, cancellationToken, Status.Instagram,
+                            textMessage!);
                         return;
 
                 }
@@ -93,7 +95,7 @@ public partial class UpdateHandlerService
                     "📺 Download Youtube movie or video" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Youtube),
                     "🎧 Download music" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Music),
                     "📸 Download Instagram video or store" => await CommandWhoSendMessage(botClient, update, cancellationToken, Status.Instagram),
-                    _ => throw new ArgumentException()
+                    _ => await CommandForPhoneNumberRequest(botClient, update, cancellationToken)
                 };
 
 

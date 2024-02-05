@@ -1,8 +1,13 @@
-﻿using Telegram.Bot.Downloader.Youtube.Clients;
+﻿using Newtonsoft.Json;
+using Telegram.Bot.Downloader.Youtube.Clients;
+using Telegram.Bot.Downloader.Youtube.Entities.Models;
+using Telegram.Bot.Downloader.Youtube.Enums;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 using YoutubeExplode;
 using File = System.IO.File;
+
 namespace Telegram.Bot.Downloader.Youtube.BotService.MessageSender;
 
 public static class SendMessage
@@ -43,19 +48,35 @@ public static class SendMessage
         else
         {
             message = await botClient.SendTextMessageAsync(
-                chatId: update.Message!.Chat.Id,
-                text: "Okay. Please only send the link",
-                replyMarkup: await ReplyKeyboardMarkups.ForMainState(adminPermission),
+                chatId: update.CallbackQuery!.Message!.Chat.Id,
+                text: "Okay send link.",
                 cancellationToken: cancellationToken
             );
         }
-
 
         return message;
     }
 
 
-    public static async ValueTask<Message> SendReadyRequest(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken, string whoReady)
+    public static async ValueTask<Message> ForMainState(
+        ITelegramBotClient botClient,
+        Update update,
+        CancellationToken cancellationToken,Client storegUser)
+    {
+        
+        var message = await botClient.SendTextMessageAsync(
+            chatId: update.Message is null ?  storegUser.TelegramId : update.Message!.Chat.Id,
+            text: "Okay. Select one page",
+            replyMarkup: await ReplyKeyboardMarkups.ForMainState(),
+            cancellationToken: cancellationToken
+        );
+
+        return message;
+    }
+
+
+    public static async ValueTask<Message> SendReadyRequest(ITelegramBotClient botClient, Update update,
+                                                            CancellationToken cancellationToken, string whoReady)
     {
         var message = await botClient.SendTextMessageAsync
         (
@@ -68,12 +89,10 @@ public static class SendMessage
     }
 
 
-
     //send video
     public static async ValueTask<Message> SendResultVideo(ITelegramBotClient botClient, Update update,
-                                                          CancellationToken cancellationToken, string videoUrls)
+                                                           CancellationToken cancellationToken, string videoUrls)
     {
-
         var youtube = new YoutubeClient();
         Message message;
 
@@ -89,7 +108,7 @@ public static class SendMessage
         await botClient.SendChatActionAsync
         (
             chatId: update.Message!.Chat.Id,
-            chatAction: ChatAction.UploadDocument,
+            chatAction: ChatAction.UploadVideo,
             cancellationToken: cancellationToken
         );
 
@@ -116,17 +135,61 @@ public static class SendMessage
                 cancellationToken: cancellationToken
             );
         }
+
         return message;
     }
 
 
 
 
+    public static async ValueTask<Message> SendResultVideoByInstagram(ITelegramBotClient botClient, Update update,
+                                                                      CancellationToken cancellationToken, string url)
+    {
+        var client = new HttpClient();
+        var request = new HttpRequestMessage
+        {
+            Method = HttpMethod.Get,
+            RequestUri =
+                new Uri(url),
+            Headers =
+            {
+                { "X-RapidAPI-Key", "55986fec27msh0d7c21c836d8933p1c7cd8jsn4d78c0f6a5b0" },
+                { "X-RapidAPI-Host", "instagram-downloader-download-instagram-videos-stories.p.rapidapi.com" },
+            },
+        };
+
+
+        using var response = await client.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadAsStringAsync();
+        var se = JsonConvert.DeserializeObject<Root>(body);
+
+        var d = new HttpClient();
+        var responses = d.GetAsync(se.media).Result;
+        var b = responses.Content.ReadAsStream(cancellationToken);
+
+        var message = await botClient.SendVideoAsync
+        (
+            chatId: update.Message!.Chat.Id,
+            video: InputFile.FromStream(b),
+            caption: "Done",
+            cancellationToken: cancellationToken
+        );
+
+        return message;
+    }
 
 
 
-
-
+    public class Root
+    {
+        public string media { get;}
+        public string thumbnail { get; set; }
+        public string Type { get; set; }
+        public string API { get; set; }
+        public string title { get; set; }
+    }
+    
     #region Admin Commands
 
     //Userlani ma'lumotlarini qaytaradi
