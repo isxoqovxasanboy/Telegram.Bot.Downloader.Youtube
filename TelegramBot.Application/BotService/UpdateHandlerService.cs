@@ -1,5 +1,7 @@
-﻿using Telegram.Bot.Downloader.Youtube.Clients;
+﻿using Telegram.Bot.Downloader.Youtube.BotService.MessageSender;
+using Telegram.Bot.Downloader.Youtube.Clients;
 using Telegram.Bot.Downloader.Youtube.DataLayer.Context;
+using Telegram.Bot.Downloader.Youtube.Enums;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -48,9 +50,39 @@ public partial class UpdateHandlerService : IUpdateHandler
         throw new NotImplementedException();
     }
 
-    private Task HandleCallbackQueryAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+    private async Task HandleCallbackQueryAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var textMessage = update.CallbackQuery!.Data;
+        var from = update.CallbackQuery!.Message!.Chat;
+        var storageUser = _clientService.GetClient(from!.Id);
+        var calBack = update.CallbackQuery.Message.Text;
+        
+        if (storageUser.Status == Status.Active  &&
+            textMessage!.StartsWith(Status.Youtube.ToString()))
+        {
+          await SendMessage.ForMainState(botClient, update, cancellationToken, false);
+           _clientService.UpdateClientUserStatus(from!.Id, Status.Youtube);
+        }
+        else if (storageUser.Status == Status.Active  &&
+                 textMessage!.StartsWith(Status.Music.ToString()))
+        {
+            await SendMessage.ForMainState(botClient, update, cancellationToken, false);
+            _clientService.UpdateClientUserStatus(from!.Id, Status.Music);
+
+        }
+        else if (storageUser.Status == Status.Active  &&
+                 textMessage!.StartsWith(Status.Instagram.ToString()))
+        {
+            await SendMessage.ForMainState(botClient, update, cancellationToken, false);
+            _clientService.UpdateClientUserStatus(from!.Id, Status.Instagram);
+        }
+        else
+        {
+            await SendMessage.ForMainState(botClient, update, cancellationToken,storageUser);
+            _clientService.UpdateClientUserStatus(from!.Id, storageUser.Status);
+        }
+
+
     }
 
     private Task HandleEditedMessageAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)

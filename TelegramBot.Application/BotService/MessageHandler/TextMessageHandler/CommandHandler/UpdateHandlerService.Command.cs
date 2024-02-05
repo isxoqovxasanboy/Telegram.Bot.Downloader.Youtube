@@ -20,17 +20,37 @@ public partial class UpdateHandlerService
                                                                CancellationToken cancellationToken, Status status,
                                                                string urlToken)
     {
-        Message message;
-        if (urlToken.StartsWith("https://youtu.be/"))
-        {
-            message = await SendMessage.SendResultVideo(botClient, update, cancellationToken, urlToken);
-            _clientService.UpdateClientUserStatus(update.Message!.Chat.Id, Status.Active);
-        }
-        else
-        {
-            message = new Message();
-        }
+        Message message = new Message();
 
+        switch (status)
+        {
+            case Status.Youtube:
+                if (urlToken.StartsWith("https://youtu.be/"))
+                {
+                    message = await SendMessage.SendResultVideo(botClient, update, cancellationToken, urlToken);
+                    _clientService.UpdateClientUserStatus(update.Message!.Chat.Id, Status.Active);
+                }
+
+                break;
+            
+            case Status.Instagram:
+                if (urlToken.StartsWith("https://www.instagram.com"))
+                {
+                    message = await SendMessage.SendResultVideoByInstagram(botClient, update, cancellationToken,
+                        urlToken);
+                    _clientService.UpdateClientUserStatus(update.Message!.Chat.Id, Status.Active);
+                }
+
+                break;
+            
+            case Status.Music:
+                break;
+            
+            default:
+                message = await SendMessage.ForMainState(botClient, update, cancellationToken);
+                _clientService.UpdateClientUserStatus(update.Message!.Chat.Id, status);
+                break;
+        }
 
         return message;
     }
@@ -47,20 +67,21 @@ public partial class UpdateHandlerService
             case Status.Youtube:
                 message = await SendMessage.SendReadyRequest(botClient, update, cancellationToken,
                     $"Send {status.ToString()} link");
-
-                _clientService.UpdateClientUserStatus(update.Message!.Chat.Id, Status.Youtube);
                 break;
             case Status.Music:
                 message = await SendMessage.SendReadyRequest(botClient, update, cancellationToken,
                     $"Send {status.ToString()} link");
-                _clientService.UpdateClientUserStatus(update.Message!.Chat.Id, Status.Music);
                 break;
-            default:
+            case Status.Instagram:
                 message = await SendMessage.SendReadyRequest(botClient, update, cancellationToken,
                     $"Send {status.ToString()} link");
-                _clientService.UpdateClientUserStatus(update.Message!.Chat.Id, Status.Instagram);
+                break;
+            default:
+                message = await SendMessage.ForMainState(botClient, update, cancellationToken);
                 break;
         }
+
+        _clientService.UpdateClientUserStatus(update.Message!.Chat.Id, status);
 
         return message;
     }
@@ -109,6 +130,6 @@ public partial class UpdateHandlerService
         if (storageUser == null)
             return await SendMessage.ForPhoneNumberRequest(botClient, update, cancellationToken);
         else
-            return await SendMessage.ForMainState(botClient, update, cancellationToken, false);
+            return await SendMessage.ForMainState(botClient, update, cancellationToken);
     }
 }
